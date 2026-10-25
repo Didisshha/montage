@@ -4,13 +4,15 @@
 
 ## Шрифты и цвета
 
-Файлы шрифтов лежат в папке `fonts/`.
+Файлы шрифтов лежат в папке `fonts/`. Все шрифты открытые (SIL Open Font License) с поддержкой кириллицы.
 
-| Роль | Шрифт | Файл |
-|---|---|---|
-| Заголовок | Stapel (Bold) | `fonts/Stapel-Bold.ttf` |
-| Дополнительный (акценты, подписи к вставкам) | Platform LC App (Regular) | `fonts/PlatformLCApp-Regular.ttf` |
-| Субтитры | Rubik (SemiBold) | `fonts/Rubik-SemiBold.ttf` |
+| Роль | Шрифт | Файл | Замена для |
+|---|---|---|---|
+| Заголовок | Unbounded (Bold) | `fonts/Unbounded-Bold.ttf` | Stapel (Bold) |
+| Дополнительный (акценты, подписи к вставкам) | Manrope (Regular) | `fonts/Manrope-Regular.ttf` | Platform LC App (Regular) |
+| Субтитры | Rubik (SemiBold) | `fonts/Rubik-SemiBold.ttf` | — (исходный открытый шрифт) |
+
+Stapel и Platform LC App — коммерческие шрифты, поэтому в проекте они не используются. Если появится лицензия на них, можно вернуть их в правила.
 
 - Основной цвет текста: белый `#FFFFFF`.
 - Выделение ключевых слов, особенно в заголовке: `#F6DC93`.
