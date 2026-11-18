@@ -1,0 +1,4 @@
+# Rendered and source videos (too large for git)
+*.mp4
+*.mov
+*.MOV
