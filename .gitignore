@@ -3,3 +3,4 @@
 *.mov
 *.MOV
 __pycache__/
+sfxlib/
