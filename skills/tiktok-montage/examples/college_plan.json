@@ -1,0 +1,58 @@
+{
+  "_comment": "Plan for 'колледж (2).mp4' (47.5s, 4K). Times in seconds of the SOURCE video.",
+  "cta": [[16.38, 24.70]],
+  "anchor": [540, 690],
+  "texts": [
+    {"t": 3.00, "out": 7.30, "x": 540, "y": 1010, "lines": [["КОЛЛЕДЖ", "UB", 96, "white"]], "sfx": "pop_hard", "gain": -9},
+    {"t": 4.14, "out": 7.30, "x": 540, "y": 1125, "lines": [["→ ВУЗ?", "UB", 96, "cream"]], "anim": "slide_r", "sfx": "whoosh", "gain": -12}
+  ],
+  "headers": [
+    {"n": 1, "l1": "фактор", "l2": "даты", "t": 10.60, "out": 16.15},
+    {"n": 2, "l1": "фактор", "l2": "информирование", "t": 24.85, "out": 35.50},
+    {"n": 3, "l1": "фактор", "l2": "вуз принимает?", "t": 35.70, "out": 41.60}
+  ],
+  "cards": [
+    {"t": 4.96, "out": 6.25, "side": "R", "icon": "uni", "caption": "вуз мечты"},
+    {"t": 6.84, "out": 7.30, "side": "L", "icon": "bigtext", "text": "?", "size": 0.5, "caption": "реально?", "sfx": "boing", "gain": -14},
+    {"t": 9.66, "out": 10.45, "side": "R", "icon": "warning", "caption": "3 фактора", "sfx": "pop_msg", "gain": -12},
+    {"t": 11.78, "out": 13.95, "side": "R", "icon": "calendar", "caption": "даты олимпиад"},
+    {"t": 15.28, "out": 16.15, "side": "L", "icon": "clock", "speed": 1200, "caption": "регистрация"},
+    {"t": 30.94, "out": 32.40, "side": "L", "icon": "uni", "caption": "администрация"},
+    {"t": 32.44, "out": 34.30, "side": "R", "icon": "magnifier", "caption": "узнай сам"},
+    {"t": 34.36, "out": 35.55, "side": "L", "icon": "checklist", "caption": "право участия", "sfx": "pop_bubble", "gain": -10},
+    {"t": 38.28, "out": 39.60, "side": "R", "icon": "uni", "caption": "твой вуз"},
+    {"t": 39.64, "out": 41.10, "side": "L", "icon": "bigcheck", "caption": "принимает", "sfx": "correct", "gain": -10},
+    {"t": 42.68, "out": 44.30, "side": "R", "y": 600, "icon": "checklist", "step": 0.3, "caption": "3 фактора", "sfx": "pop_bubble", "gain": -10},
+    {"t": 44.78, "out": 46.10, "side": "L", "icon": "uni", "caption": "вуз мечты"},
+    {"t": 46.22, "out": 47.45, "side": "R", "icon": "medal", "caption": "обгони всех", "sfx": "fly_swoosh", "gain": -10}
+  ],
+  "stamps": [
+    {"t": 6.34, "out": 7.30, "text": "БВИ", "color": "cream", "x": 875, "y": 560, "size": 72, "angle": -10, "sfx": "zoom_impact", "gain": -9},
+    {"t": 8.08, "out": 9.40, "text": "ДА!", "color": "green", "x": 540, "y": 1060, "size": 110, "angle": -6, "sfx": "correct", "gain": -9},
+    {"t": 12.62, "out": 14.00, "text": "НИКТО НЕ СКАЖЕТ", "color": "red", "x": 540, "y": 1120, "size": 54, "angle": -5, "sfx": "buzzer", "gain": -15},
+    {"t": 41.88, "out": 43.10, "text": "ВУАЛЯ", "color": "cream", "x": 540, "y": 1060, "size": 96, "angle": -6, "sfx": "sparkle", "gain": -9}
+  ],
+  "sparkles": [
+    {"t": 41.90, "out": 43.30, "side": "L"},
+    {"t": 42.00, "out": 43.30, "side": "R"}
+  ],
+  "sfx": [
+    [0.0, "deep_impact", -10], [2.92, "swoosh_quick", -12],
+    [12.10, "typing", -10], [12.25, "typing", -12], [15.35, "tick_fast", -14],
+    [32.55, "sweep", -14], [34.61, "pop_bubble", -10], [34.86, "pop_bubble", -10],
+    [42.98, "pop_bubble", -10], [43.28, "pop_bubble", -10], [46.60, "achievement", -12]
+  ],
+  "framing": [
+    [0.00, 0.30, 1.25, 1.00, false], [0.30, 3.00, 1.00, 1.05, false], [3.00, 4.10, 1.22, 1.24, true],
+    [4.10, 6.10, 1.08, 1.12, false], [6.10, 7.40, 1.32, 1.34, true], [7.40, 8.50, 1.00, 1.02, false],
+    [8.50, 10.55, 1.18, 1.21, true], [10.55, 12.25, 1.00, 1.05, false], [12.25, 14.05, 1.30, 1.32, true],
+    [14.05, 15.20, 1.08, 1.10, false], [15.20, 16.36, 1.25, 1.27, true],
+    [24.70, 26.10, 1.00, 1.05, false], [26.10, 28.65, 1.20, 1.23, true], [28.65, 30.90, 1.00, 1.05, false],
+    [30.90, 32.40, 1.22, 1.24, true], [32.40, 34.30, 1.08, 1.12, false], [34.30, 35.62, 1.30, 1.32, true],
+    [35.62, 37.10, 1.00, 1.04, false], [37.10, 39.60, 1.20, 1.23, true], [39.60, 41.70, 1.05, 1.10, false],
+    [41.70, 42.60, 1.35, 1.37, true], [42.60, 44.00, 1.00, 1.04, false], [44.00, 46.20, 1.18, 1.21, true],
+    [46.20, 99.0, 1.32, 1.36, true]
+  ],
+  "shakes": [8.08, 12.62, 36.80],
+  "flashes": [10.60, 24.85, 35.70]
+}

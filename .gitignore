@@ -4,3 +4,4 @@
 *.MOV
 __pycache__/
 sfxlib/
+*.zip
