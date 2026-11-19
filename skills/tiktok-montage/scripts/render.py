@@ -372,6 +372,8 @@ def ic_warning(d, img, box):
 COLORS = {"cream": CREAM, "white": WHITE, "lav": LAV, "plum": PLUM, "red": RED, "green": GREEN}
 LX, RX, IY = 205, 875, 560   # card centres left/right of the head (1080x1920 output)
 HX, HY = 50, 840             # tip header top-left
+HX, HY = PLAN.get("header_pos", [HX, HY])
+LX, RX, IY = PLAN.get("card_x", [LX, RX]) + [PLAN.get("card_y", IY)]
 ELS, SFX_EV = [], []
 col = lambda c: COLORS[c] if isinstance(c, str) else tuple(c)
 
@@ -439,7 +441,7 @@ for h in PLAN.get("headers", []):
 
 for cd in PLAN.get("cards", []):
     make, dyn = icon(cd)
-    x = {"L": LX, "R": RX}.get(cd.get("side", "R"), cd.get("x", RX))
+    x = cd["x"] if "x" in cd else {"L": LX, "R": RX}.get(cd.get("side", "R"), RX)
     ELS.append(El(cd["t"], cd["out"], x, cd.get("y", IY), make, anim=cd.get("anim", "pop"), dyn=dyn))
     add_sfx(cd["t"], cd.get("sfx", "pop_light"), cd.get("gain", -8))
 

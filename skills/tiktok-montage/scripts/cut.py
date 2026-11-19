@@ -74,9 +74,9 @@ with wave.open(tmpa, "w") as wf:
 
 expr = "+".join(f"between(t,{r0:.4f},{r1 - FD / 2:.4f})" for r0, r1, _ in segs)
 fexpr = out + ".select.txt"
-open(fexpr, "w").write(f"select='{expr}',setpts=N/FRAME_RATE/TB,setpts=PTS/{speed},fps={num}/{den}")
+open(fexpr, "w").write(f"[0:v:0]select='{expr}',setpts=N/FRAME_RATE/TB,setpts=PTS/{speed},fps={num}/{den}[v]")
 subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-i", tmpa, "-filter_complex_script", fexpr,
-                "-map", "0:v", "-map", "1:a", "-af", f"atempo={speed}", "-c:v", "libx264", "-preset", "fast",
+                "-map", "[v]", "-map", "1:a", "-af", f"atempo={speed}", "-c:v", "libx264", "-preset", "fast",
                 "-crf", "14", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "256k", "-shortest", out], check=True)
 os.remove(tmpa); os.remove(fexpr)
 
