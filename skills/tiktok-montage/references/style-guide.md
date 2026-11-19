@@ -37,10 +37,10 @@ The source videos already contain burned-in word-by-word subtitles (white, centr
 - **Finale:** sparkles, a summary checklist, a medal or "вуз мечты" card, and an "achievement" sound on the last words.
 - Cards live 1–2.5 s. Headers live for the whole tip. Overlays exit 0.2 s after `out`.
 
-## Sound (Mixkit, real recordings — sounds like normal TikTok edits)
+## Sound (default: soft synthesized set from `make_synth_sfx.py`)
 - Every visual event has a sound: header = `swoosh_fast` + `zoom_impact`, card = `pop_light`, stamp = `pop_hard`/`zoom_impact`, positive = `correct`, negative = `buzzer`, magic = `sparkle`, finale = `achievement`.
 - Sound effects sit 8–18 dB under the voice (gain −8 … −18). Never put a sound effect in the CTA.
-- Earlier experiment: synthesised effects sounded "AI-made", and the user preferred real samples.
+- History: the synthesized set («Советы») was approved. The Mixkit real-sample set («Колледж») was judged "too harsh", so the synthesized set is the default again. With synthesized sounds use quieter gains: pops about −16, stamps −10, header whoosh −15 with impact −13, dings −15 … −18 (or `"sfx_trim"`).
 
 ## Reference analysis (what the approved videos do)
 - r3 «ЕГЭ — лотерея» (the main reference): framing changes every 2–4 s; big lavender numbers with white text for list items; rounded-corner photo and screenshot cards; one keyword-per-word subtitle.

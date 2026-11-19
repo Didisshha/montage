@@ -248,11 +248,11 @@ def sparkles_img(ph, seed):
 
 # ---------------------------------------------------------------- element model
 class El:
-    def __init__(self, t_in, t_out, cx, cy, make, anim="pop", dyn=False, bob=6.0, rot=0.0, d_in=0.28):
+    def __init__(self, t_in, t_out, cx, cy, make, anim="pop", dyn=False, bob=6.0, rot=0.0, d_in=0.28, cta_ok=False):
         self.t_in, self.t_out, self.cx, self.cy = t_in, t_out, cx, cy
         self.make, self.anim, self.dyn, self.bob, self.rot, self.d_in = make, anim, dyn, bob, rot, d_in
         self.cache = {}
-        assert not any(a < t_out + 0.2 and t_in < b for a, b in CTA), f"overlay in CTA {t_in}"
+        assert cta_ok or not any(a < t_out + 0.2 and t_in < b for a, b in CTA), f"overlay in CTA {t_in}"
 
     def img(self, tr):
         key = round(tr * 15) if self.dyn else 0
@@ -273,10 +273,11 @@ def ease_cubic(x):
 
 
 def place(frame_f, el, t):
-    if t < el.t_in or t >= el.t_out + 0.2:
+    tail = 0.0 if el.anim == "subpop" else 0.2
+    if t < el.t_in or t >= el.t_out + tail:
         return frame_f
     tr = t - el.t_in
-    a_in = min(tr / el.d_in, 1.0); a_out = max(0.0, (t - el.t_out) / 0.2)
+    a_in = min(tr / el.d_in, 1.0); a_out = 0.0 if tail == 0 else max(0.0, (t - el.t_out) / 0.2)
     alpha = min(1.0, a_in * 2.5) * (1 - a_out)
     sc, rot, dx, dy = 1.0, el.rot, 0.0, 0.0
     if el.anim == "pop":
@@ -287,6 +288,10 @@ def place(frame_f, el, t):
         dx = -(1 - ease_cubic(a_in)) * 500
     elif el.anim == "slide_r":
         dx = (1 - ease_cubic(a_in)) * 500
+    elif el.anim == "slide_u":
+        dy = (1 - ease_cubic(a_in)) * 900
+    elif el.anim == "subpop":
+        sc = 0.85 + 0.15 * ease_back(a_in); alpha = min(1.0, a_in * 4) * (1 - a_out)
     sc *= 1 - 0.35 * a_out
     dy += math.sin(2 * math.pi * 0.7 * tr) * el.bob
     rot += math.sin(2 * math.pi * 0.45 * tr) * (1.5 if el.bob else 0)
@@ -455,6 +460,93 @@ for sp in PLAN.get("sparkles", []):
                   (lambda seed: (lambda p: sparkles_img(p, seed)))(len(ELS)), dyn=True, bob=0, anim="fade"))
     add_sfx(sp["t"], sp.get("sfx"), sp.get("gain", -10))
 
+RB = lambda s: ImageFont.truetype(FONTS + "Rubik-SemiBold.ttf", s)
+
+# --- brand plate (persistent semi-transparent "тгк: ..." near the top, below TikTok's UI band)
+if PLAN.get("brand"):
+    b = PLAN["brand"]; f = MR(b.get("size", 40))
+    d0 = ImageDraw.Draw(Image.new("RGBA", (1, 1))); bb = d0.textbbox((0, 0), b["text"], font=f)
+    padx, pady = 30, 14
+    im = Image.new("RGBA", (bb[2] + 2 * padx, bb[3] + 2 * pady), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    d.rounded_rectangle((0, 0, im.width - 1, im.height - 1), im.height // 2, fill=PLUM + (150,))
+    d.text((padx, pady - 2), b["text"], font=f, fill=(255, 255, 255, 235))
+    a = b.get("alpha", 0.6); im.putalpha(im.split()[3].point(lambda v: int(v * a)))
+    ELS.append(El(0, 1e9, 540, b.get("y", 250), im, anim="none", bob=0, d_in=0.001, cta_ok=True))
+
+
+# --- word-by-word subtitles (Rubik SemiBold, white; highlighted words in cream)
+def _clean(w):
+    return w.strip(" «»\"“”.,!?:;…")
+
+
+if PLAN.get("subtitles"):
+    sb = PLAN["subtitles"]; words = sb["words"]; hl = {h.lower() for h in sb.get("highlight", [])}
+    size, sy = sb.get("size", 66), sb.get("y", 1330)
+    cache = {}
+    for i, (ws, we, w) in enumerate(words):
+        w = _clean(w)
+        if not w:
+            continue
+        nxt = words[i + 1][0] if i + 1 < len(words) else we + 0.4
+        end = min(nxt, we + sb.get("hold", 0.35))
+        key = (w, w.lower() in hl)
+        if key not in cache:
+            cache[key] = text_img([(w, RB(size), CREAM if key[1] else WHITE)], align="center")
+        x, y = 540, sy
+        for z in sb.get("zones", []):  # [t0, t1, x, y]: move subtitles while e.g. a phone screen is shown
+            if z[0] <= ws < z[1]:
+                x, y = z[2], z[3]
+        ELS.append(El(ws, end, x, y, cache[key], anim="subpop", bob=0, d_in=0.12, cta_ok=True))
+
+
+# --- phone/screen inserts from screenshots: slide up, optional typing reveal, taps, scrolling
+def _screen_maker(sp):
+    w = sp.get("w", 470)
+    src_im = Image.open(sp["img"]).convert("RGB")
+    src_im = src_im.resize((w, int(src_im.height * w / src_im.width)), Image.LANCZOS)
+    ih = src_im.height; h = min(sp.get("h", 840), ih)
+    smooth = lambda q: q * q * (3 - 2 * q)
+
+    def make(p):
+        off = 0
+        if sp.get("scroll") and ih > h:
+            st, du = sp["scroll"]; off = int(smooth(min(max((p - st) / du, 0), 1)) * (ih - h))
+        im = src_im.crop((0, off, w, off + h)).convert("RGBA"); d = ImageDraw.Draw(im)
+        ty = sp.get("type")
+        if ty:  # hide the not-yet-typed part of a text field
+            fx0, fy0, fx1, fy1 = ty["box"]; x0, y0, x1, y1 = fx0 * w, fy0 * ih - off, fx1 * w, fy1 * ih - off
+            r = min(max((p - ty.get("start", 0.2)) / ty.get("dur", 0.8), 0), 1); xr = x0 + r * (x1 - x0)
+            bg = src_im.getpixel((min(int(x1) - 2, w - 1), int((fy0 + fy1) / 2 * ih)))
+            if r < 1:
+                d.rectangle((xr, y0, x1, y1), fill=bg + (255,))
+            if r < 1 or int(p * 3) % 2 == 0:
+                d.rectangle((xr + 2, y0 + (y1 - y0) * .2, xr + 5, y1 - (y1 - y0) * .2), fill=(255, 255, 255, 255))
+        for dt, fx, fy in sp.get("taps", []):
+            k = (p - dt) / 0.6
+            if 0 <= k < 1:
+                cx, cy = fx * w, fy * ih - off; rr = 18 + 50 * k
+                d.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), outline=(255, 255, 255, int(255 * (1 - k))), width=6)
+                d.ellipse((cx - 16, cy - 16, cx + 16, cy + 16), fill=(255, 255, 255, int(160 * (1 - k))))
+        mask = Image.new("L", im.size, 0); ImageDraw.Draw(mask).rounded_rectangle((0, 0, w - 1, h - 1), 34, fill=255)
+        im.putalpha(Image.fromarray(np.minimum(np.asarray(im.split()[3]), np.asarray(mask))))
+        frame = Image.new("RGBA", (w + 12, h + 12), (0, 0, 0, 0))
+        ImageDraw.Draw(frame).rounded_rectangle((0, 0, w + 11, h + 11), 40, fill=LAV + (255,))
+        frame.paste(im, (6, 6), im)
+        return shadowed(frame, blur=16, alpha=0.6)
+    return make
+
+
+for sp in PLAN.get("screens", []):
+    ELS.append(El(sp["t"], sp["out"], sp.get("x", 300), sp.get("y", 1150), _screen_maker(sp), anim=sp.get("anim", "slide_u"),
+                  dyn=True, bob=sp.get("bob", 0), d_in=sp.get("d_in", 0.35), cta_ok=True))
+    add_sfx(sp["t"], sp.get("sfx", "whoosh"), sp.get("gain", -12))
+    for dt, *_ in sp.get("taps", []):
+        add_sfx(sp["t"] + dt, sp.get("tap_sfx", "pop_bubble"), sp.get("tap_gain", -12))
+    if sp.get("type"):
+        ty = sp["type"]; n = ty.get("ticks", 8)
+        for i in range(n):
+            add_sfx(sp["t"] + ty.get("start", 0.2) + i * ty.get("dur", 0.8) / n, "typing", -20)
+
 for e in PLAN.get("sfx", []):
     add_sfx(e[0], e[1], e[2])
 
@@ -475,13 +567,21 @@ if PLAN.get("whoosh_on_punch", True):  # quiet sweep on punch-ins that have no o
 def scale_at(t):
     if in_cta(t):
         return 1.0
-    for t0, t1, s0, s1, punch in FRAMING:
+    for f in FRAMING:
+        t0, t1, s0, s1, punch = f[:5]
         if t0 <= t < t1:
             p = (t - t0) / (t1 - t0); s = s0 + (s1 - s0) * p
             if punch:
                 k = ease_cubic(min((t - t0) / 0.16, 1.0)); s = 1 + (s - 1) * k
             return s
     return 1.0
+
+
+def anchor_at(t):
+    for f in FRAMING:
+        if f[0] <= t < f[1] and len(f) > 5:
+            return tuple(f[5])
+    return ANCHOR
 
 
 SHAKE_OFF = np.random.default_rng(3).uniform(-1, 1, (4000, 2))
@@ -516,7 +616,7 @@ def transform(frame, t, n):
         s = max(s, 1.03)
     if abs(s - 1) < 1e-4 and not (dx or dy):
         return frame if SW == W else cv2.resize(frame, (W, H), interpolation=cv2.INTER_AREA)
-    k = s * W / SW; ax, ay = ANCHOR
+    k = s * W / SW; ax, ay = anchor_at(t)
     M = np.array([[k, 0, ax * (1 - s) + dx], [0, k, ay * (1 - s) + dy]], np.float32)
     return cv2.warpAffine(frame, M, (W, H), flags=cv2.INTER_AREA if SW > W else cv2.INTER_CUBIC,
                           borderMode=cv2.BORDER_REFLECT)
@@ -524,6 +624,8 @@ def transform(frame, t, n):
 
 # ---------------------------------------------------------------- audio
 def load_mp3(path):
+    if not os.path.exists(path):
+        path = path[:-4] + ".wav"
     raw = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-ac", "1", "-ar", "48000", "-f", "f32le", "-"],
                          capture_output=True, check=True).stdout
     x = np.frombuffer(raw, np.float32)
@@ -539,9 +641,10 @@ def build_audio(path_out):
         v = np.frombuffer(wf.readframes(wf.getnframes()), np.int16).astype(np.float32).reshape(-1, 2) / 32768
     lib, mix = {}, v.copy()
     for t, name, g in SFX_EV:
-        assert not in_cta(t), f"sound effect inside CTA at {t}s"
+        assert PLAN.get("cta_sfx_ok") or not in_cta(t), f"sound effect inside CTA at {t}s"
         if name not in lib:
             lib[name] = load_mp3(os.path.join(SFXDIR, name + ".mp3"))
+        g = g + PLAN.get("sfx_gain", 0) + PLAN.get("sfx_trim", {}).get(name, 0)
         x = lib[name] * (10 ** (g / 20)); st = int(max(t, 0) * 48000); en = min(st + len(x), len(mix))
         for a, b in CTA:  # never let an effect ring on into the CTA
             if st < int(a * 48000) < en:

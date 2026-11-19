@@ -19,10 +19,17 @@ Read these before planning (they are short):
 4. Do not remove or re-add the watermark. Do not cut speech unless asked.
 5. Audio: voice ends at about −14 LUFS with peaks at or below −1.5 dBTP. The renderer does this; you only verify it.
 
+## Raw sources (long, uncut, no subtitles)
+If the source is raw footage ("лютый исходник"):
+1. Transcribe the source and choose the story. Keep only what carries the point; drop side remarks, repeats, "понимаешь", rhetorical detours. Aim for a target length; at 1.2× the kept source must be ≤ target × 1.2.
+2. Write `keep.json` with phrase ranges `[start, end, "speaker"]`. Run `CUT_DRY=1 python3 scripts/cut.py SRC keep.json cut.mp4 1.2` to see the kept seconds, iterate, then run it without `CUT_DRY`. The script strips pauses over 0.2 s inside each range, crossfades the joins and speeds up. `CUT_THR` (default 0.25) is the voice threshold; raise it for a noisy room, lower it if a quiet speaker gets cut.
+3. Re-transcribe `cut.mp4` and plan everything on that timeline. Add `subtitles` and a title `text`, because raw sources have none.
+4. Two speakers in a wide shot: find who talks when (mouth motion or content), then alternate a two-shot (about 1.45×) with singles (1.7–1.8×, face centred) on the active speaker. In two-shots, put cards between the heads, not beside them.
+
 ## Workflow
 1. **Setup** (once per machine):
    `pip install faster-whisper opencv-python-headless pillow numpy scipy` and have `ffmpeg` installed.
-   `bash scripts/fetch_sfx.sh sfxlib` downloads the sound library (Mixkit, free licence, do not commit the files).
+   Sounds: the user prefers the **soft synthesized set**. Run `python3 scripts/make_synth_sfx.py sfxsynth` and use `sfxsynth` as SFX_DIR. The Mixkit set (`bash scripts/fetch_sfx.sh sfxlib`) was judged "too harsh"; use it only if asked.
 2. **Inspect** the source: `bash scripts/inspect.sh SOURCE work/` then open `work/sheet.jpg` and `work/opening.jpg`.
    Note: resolution must be 9:16; when the source title disappears; the subtitle line's y position; where the face is (x/y range in 1080×1920 coordinates); any existing phone/screen inserts (they mark the CTA).
 3. **Transcribe**: `python3 scripts/transcribe.py SOURCE work/words.json` → segments + `word@time` list.
