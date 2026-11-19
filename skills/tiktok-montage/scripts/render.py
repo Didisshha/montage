@@ -133,7 +133,7 @@ def ic_medals_strike(p):
 def ic_bigtext(txt, col=CREAM, size=.34):
     def f(d, img, box):
         cx, cy, s = C(box); fb = UB(int(s * size)); b = d.textbbox((0, 0), txt, font=fb)
-        d.text((cx - b[2] / 2, cy - b[3] / 2), txt, font=fb, fill=col)
+        d.text((cx - b[2] / 2, cy - b[3] / 2), txt, font=fb, fill=col, align="center")
     return f
 
 
