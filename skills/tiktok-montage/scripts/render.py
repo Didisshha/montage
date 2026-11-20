@@ -50,6 +50,20 @@ def text_img(lines, align="left"):
     return shadowed(img)
 
 
+def fit_font(d, text, make_font, size, maxw, maxh=None):
+    """largest font (<= size) whose bbox fits maxw x maxh; returns (font, bbox)"""
+    while True:
+        f = make_font(int(size)); b = d.multiline_textbbox((0, 0), text, font=f, align="center", spacing=int(size * 0.12))
+        if (b[2] - b[0] <= maxw and (maxh is None or b[3] - b[1] <= maxh)) or size <= 10:
+            return f, b, int(size * 0.12)
+        size *= 0.94
+
+
+def draw_centered(d, text, make_font, size, cx, cy, maxw, maxh, fill):
+    f, b, sp = fit_font(d, text, make_font, size, maxw, maxh)
+    d.multiline_text((cx - (b[0] + b[2]) / 2, cy - (b[1] + b[3]) / 2), text, font=f, fill=fill, align="center", spacing=sp)
+
+
 def card(draw_icon, caption, w=280, h=300, border=LAV):
     """Rounded plum card with an icon (drawn at SS scale) and caption."""
     big = Image.new("RGBA", (w * SS, h * SS), (0, 0, 0, 0))
@@ -58,9 +72,7 @@ def card(draw_icon, caption, w=280, h=300, border=LAV):
     icon_h = (h - 70) * SS if caption else h * SS
     draw_icon(d, big, (0, 0, w * SS, icon_h))
     if caption:
-        f = MR(34 * SS)
-        b = d.textbbox((0, 0), caption, font=f)
-        d.text(((w * SS - b[2]) // 2, icon_h + 4 * SS), caption, font=f, fill=WHITE + (255,))
+        draw_centered(d, caption, MR, 34 * SS, w * SS / 2, icon_h + 30 * SS, (w - 32) * SS, 52 * SS, WHITE + (255,))
     return shadowed(big.resize((w, h), Image.LANCZOS), blur=14, alpha=0.55)
 
 
@@ -132,8 +144,8 @@ def ic_medals_strike(p):
 
 def ic_bigtext(txt, col=CREAM, size=.34):
     def f(d, img, box):
-        cx, cy, s = C(box); fb = UB(int(s * size)); b = d.textbbox((0, 0), txt, font=fb)
-        d.text((cx - b[2] / 2, cy - b[3] / 2), txt, font=fb, fill=col, align="center")
+        cx, cy, s = C(box)
+        draw_centered(d, txt, UB, s * size, cx, cy, (box[2] - box[0]) * 0.84, (box[3] - box[1]) * 0.8, col)
     return f
 
 
@@ -223,13 +235,14 @@ def ic_buoy(ang):
     return f
 
 
-def stamp_img(text, col, size=64, angle=-8):
-    f = UB(size * SS)
-    d0 = ImageDraw.Draw(Image.new("RGBA", (1, 1))); b = d0.textbbox((0, 0), text, font=f)
-    pad = 26 * SS
-    img = Image.new("RGBA", (b[2] + 2 * pad, b[3] + 2 * pad), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
-    d.rounded_rectangle((4, 4, img.width - 5, img.height - 5), 22 * SS, fill=PLUM + (200,), outline=col + (255,), width=7 * SS)
-    d.text((pad, pad - 4 * SS), text, font=f, fill=col + (255,))
+def stamp_img(text, col, size=64, angle=0, maxw=980):
+    d0 = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    f, b, sp = fit_font(d0, text, UB, size * SS, (maxw - 60) * SS)
+    padx, pady = 30 * SS, 20 * SS
+    tw, th = b[2] - b[0], b[3] - b[1]
+    img = Image.new("RGBA", (tw + 2 * padx, th + 2 * pady), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
+    d.rounded_rectangle((4, 4, img.width - 5, img.height - 5), 22 * SS, fill=PLUM + (215,), outline=col + (255,), width=6 * SS)
+    d.multiline_text((padx - b[0], pady - b[1]), text, font=f, fill=col + (255,), align="center", spacing=sp)
     img = img.resize((img.width // SS, img.height // SS), Image.LANCZOS).rotate(angle, Image.BICUBIC, expand=True)
     return shadowed(img)
 
@@ -294,7 +307,7 @@ def place(frame_f, el, t):
         sc = 0.85 + 0.15 * ease_back(a_in); alpha = min(1.0, a_in * 4) * (1 - a_out)
     sc *= 1 - 0.35 * a_out
     dy += math.sin(2 * math.pi * 0.7 * tr) * el.bob
-    rot += math.sin(2 * math.pi * 0.45 * tr) * (1.5 if el.bob else 0)
+    # (no rotation wobble: it read as "crooked" on screen)
     src = el.img(tr)
     h, w = src.shape[:2]
     R = cv2.getRotationMatrix2D((w / 2, h / 2), rot, sc)
@@ -422,19 +435,30 @@ def icon(spec):
 
 
 def add_sfx(t, name, gain):
-    if name:
+    if name and (PLAN.get("sfx_allow") is None or name in PLAN["sfx_allow"]):
         SFX_EV.append((t, name, gain))
 
 
+def header_img(n, l1, l2):
+    """big lavender number + plum plate with two lines; everything aligned on real glyph boxes"""
+    d0 = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    fn = UB(170 * SS); bn = d0.textbbox((0, 0), str(n), font=fn)
+    f1, b1, _ = fit_font(d0, l1, UB, 44 * SS, 520 * SS); f2, b2, _ = fit_font(d0, l2, UB, 44 * SS, 520 * SS)
+    lh = max(b1[3] - b1[1], b2[3] - b2[1]); gap = 14 * SS; padx, pady = 26 * SS, 22 * SS
+    pw = max(b1[2] - b1[0], b2[2] - b2[0]) + 2 * padx; ph = 2 * lh + gap + 2 * pady
+    nw, nh = bn[2] - bn[0], bn[3] - bn[1]
+    W_, H_ = nw + 18 * SS + pw, max(nh, ph)
+    img = Image.new("RGBA", (W_, H_), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
+    d.text((-bn[0], (H_ - nh) / 2 - bn[1]), str(n), font=fn, fill=LAV + (255,))
+    px, py = nw + 18 * SS, (H_ - ph) / 2
+    d.rounded_rectangle((px, py, px + pw, py + ph), 26 * SS, fill=PLUM + (215,))
+    d.text((px + padx - b1[0], py + pady - b1[1]), l1, font=f1, fill=WHITE + (255,))
+    d.text((px + padx - b2[0], py + pady + lh + gap - b2[1]), l2, font=f2, fill=CREAM + (255,))
+    return shadowed(img.resize((W_ // SS, H_ // SS), Image.LANCZOS))
+
+
 for h in PLAN.get("headers", []):
-    num = text_img([(str(h["n"]), UB(190), LAV)])
-    t0 = text_img([(h["l1"], UB(46), WHITE), (h["l2"], UB(46), CREAM)])
-    pad = 14
-    txt = Image.new("RGBA", (t0.width + 2 * pad - 40, t0.height + 2 * pad - 40), (0, 0, 0, 0))
-    ImageDraw.Draw(txt).rounded_rectangle((0, 0, txt.width - 1, txt.height - 1), 26, fill=PLUM + (205,))
-    txt.paste(t0, (pad - 30, pad - 30), t0)
-    im = Image.new("RGBA", (num.width + txt.width, max(num.height, txt.height)), (0, 0, 0, 0))
-    im.paste(num, (0, 0), num); im.paste(txt, (num.width - 30, (num.height - txt.height) // 2 + 10), txt)
+    im = header_img(h["n"], h["l1"], h["l2"])
     ELS.append(El(h["t"], h["out"], HX + im.width / 2, HY + im.height / 2, im, anim="slide_l", bob=0, d_in=0.3))
     add_sfx(max(h["t"] - 0.1, 0), h.get("sfx_in", "swoosh_fast"), -9)
     add_sfx(h["t"] + 0.02, h.get("sfx_hit", "zoom_impact"), -8)
@@ -447,7 +471,7 @@ for cd in PLAN.get("cards", []):
 
 for st in PLAN.get("stamps", []):
     ELS.append(El(st["t"], st["out"], st.get("x", 540), st.get("y", 1060),
-                  stamp_img(st["text"], col(st.get("color", "cream")), st.get("size", 72), st.get("angle", -8)),
+                  stamp_img(st["text"], col(st.get("color", "cream")), st.get("size", 72), st.get("angle", 0)),
                   anim="stamp", bob=0, d_in=0.16))
     add_sfx(st["t"] + 0.08, st.get("sfx", "pop_hard"), st.get("gain", -8))
 
@@ -469,16 +493,17 @@ if PLAN.get("brand"):
     b = PLAN["brand"]; f = MR(b.get("size", 40))
     d0 = ImageDraw.Draw(Image.new("RGBA", (1, 1))); bb = d0.textbbox((0, 0), b["text"], font=f)
     padx, pady = 30, 14
-    im = Image.new("RGBA", (bb[2] + 2 * padx, bb[3] + 2 * pady), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    im = Image.new("RGBA", (bb[2] - bb[0] + 2 * padx, bb[3] - bb[1] + 2 * pady), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
     d.rounded_rectangle((0, 0, im.width - 1, im.height - 1), im.height // 2, fill=PLUM + (150,))
-    d.text((padx, pady - 2), b["text"], font=f, fill=(255, 255, 255, 235))
+    d.text((padx - bb[0], pady - bb[1]), b["text"], font=f, fill=(255, 255, 255, 235))
     a = b.get("alpha", 0.6); im.putalpha(im.split()[3].point(lambda v: int(v * a)))
     ELS.append(El(0, 1e9, 540, b.get("y", 250), im, anim="none", bob=0, d_in=0.001, cta_ok=True))
 
 
 # --- word-by-word subtitles (Rubik SemiBold, white; highlighted words in cream)
 def _clean(w):
-    return w.strip(" «»\"“”.,!?:;…")
+    w = w.strip(" \"“”.,!:;…")  # keep «» around titles and ? at questions
+    return w if w not in ("«", "»", "?") else ""
 
 
 if PLAN.get("subtitles"):
@@ -491,13 +516,13 @@ if PLAN.get("subtitles"):
             continue
         nxt = words[i + 1][0] if i + 1 < len(words) else we + 0.4
         end = min(nxt, we + sb.get("hold", 0.35))
-        key = (w, w.lower() in hl)
-        if key not in cache:
-            cache[key] = text_img([(w, RB(size), CREAM if key[1] else WHITE)], align="center")
-        x, y = 540, sy
-        for z in sb.get("zones", []):  # [t0, t1, x, y]: move subtitles while e.g. a phone screen is shown
+        x, y, zs = 540, sy, size
+        for z in sb.get("zones", []):  # [t0, t1, x, y(, size)]: move subtitles while e.g. a phone screen is shown
             if z[0] <= ws < z[1]:
-                x, y = z[2], z[3]
+                x, y = z[2], z[3]; zs = z[4] if len(z) > 4 else size
+        key = (w, w.lower() in hl, zs)
+        if key not in cache:
+            cache[key] = text_img([(w, RB(zs), CREAM if key[1] else WHITE)], align="center")
         ELS.append(El(ws, end, x, y, cache[key], anim="subpop", bob=0, d_in=0.12, cta_ok=True))
 
 
@@ -552,6 +577,7 @@ for sp in PLAN.get("screens", []):
 for e in PLAN.get("sfx", []):
     add_sfx(e[0], e[1], e[2])
 
+ELS.sort(key=lambda e: e.anim == "subpop")  # subtitles are always the top layer
 FRAMING = [tuple(f) for f in PLAN.get("framing", [])]
 SHAKES = PLAN.get("shakes", [])
 FLASHES = PLAN.get("flashes", [])

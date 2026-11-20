@@ -51,3 +51,12 @@ If the source is raw footage ("лютый исходник"):
 - The source is not 9:16 → ask the user; do not crop people out.
 - The face sits much higher or lower than in the examples → change `"anchor"` (zoom centre ≈ face centre) and the card `y`.
 - An idea needs a new icon → reuse `bigtext` (any short text or emoji-free symbol), or a `stamp`, before writing new drawing code. New icons go in `render.py` next to `ic_*` and get a branch in `icon()`.
+
+## Quality bar (learned the hard way — the audience is literary and notices everything)
+- **Never put Whisper text on screen.** Write the proofread text of the final cut yourself (names, «titles» in guillemets, ё, capitals, punctuation) and time it with `plan_helpers.align_subs(text, words.json)`. Glue prepositions and near-instant words to the next word (see `examples/final/montage_gen.py: glue`). Re-listen to doubtful spots with an `initial_prompt` of names before deciding.
+- **Proofread every graphic string** (headers, stamps, card titles, captions, labels) before rendering. Prefer Russian over anglicisms ("против", not "vs"); say what you mean ("2 из 4", not "2 : 4").
+- **Sound: minimal.** No whooshes or sweeps; the user found them distracting. Use `"sfx_allow": ["correct", "buzzer", "ding", "achievement", "pop_light"]` and give screens, headers, cards and shakes no sound.
+- **Text must fit and sit straight.** The engine auto-fits card text and captions, centres on real glyph boxes, draws stamps straight (angle 0) and has no rotation wobble. Keep captions to 1–2 short words anyway.
+- **Joins:** `cut.py` snaps every cut to the quietest 10 ms nearby and never lets pieces overlap. Run `scripts/edges.py SOURCE cut.segments.json` and listen to anything it flags; if a word is cut off (e.g. a reply overlapping the next speaker), drop or widen that range.
+- **Layers and safe zones:** subtitles are always the top layer; labels for phone screens go above the phone, never bottom-right (TikTok buttons).
+- QA: grab a frame 0.45 s after every overlay appears (see the final examples) and look at all of them before delivering.

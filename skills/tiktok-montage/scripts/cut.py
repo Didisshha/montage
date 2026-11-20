@@ -30,10 +30,19 @@ floor = np.percentile(db, 10)
 thr = floor + float(os.environ.get("CUT_THR", 0.25)) * (np.percentile(db, 95) - floor)
 voiced = db > thr
 
+def quiet_near(t, lo, hi):
+    """move a cut point to the quietest 10 ms within [t+lo, t+hi], so no word is clipped at a join"""
+    if os.environ.get("CUT_SNAP", "1") == "0":
+        return t
+    a, b = max(int((t + lo) * 100), 0), min(int((t + hi) * 100) + 1, len(db))
+    return (a + int(np.argmin(db[a:b]))) / 100 if b > a else t
+
+
 segs = []  # (first_frame, n_frames, tag)
 for entry in keep:
     s, e, tag = entry[:3]
     if len(entry) > 3 and entry[3] == "all":  # keep the whole range (short/quiet key replies)
+        s, e = quiet_near(s, -0.12, 0.05), quiet_near(e, -0.05, 0.12)
         segs.append((int(round(s / FD)), int(round((e - s) / FD)), tag)); continue
     a, b = int(s * 100), int(e * 100); v = voiced[a:b]; runs = []; i = 0
     while i < len(v):
@@ -52,18 +61,29 @@ for entry in keep:
     for r0, r1 in merged:
         if r1 - r0 < 0.08:
             continue
-        f0 = int(round(max(s, r0 - PAD_IN) / FD)); f1 = int(round(min(e, r1 + PAD_OUT) / FD))
+        r0, r1 = quiet_near(r0 - PAD_IN, -0.08, 0.03), quiet_near(r1 + PAD_OUT, -0.03, 0.08)
+        f0 = int(round(max(s - 0.12, r0) / FD)); f1 = int(round(min(e + 0.12, r1) / FD))
         if segs and segs[-1][2] == tag and f0 <= segs[-1][0] + segs[-1][1]:  # overlapping/adjacent: extend
             segs[-1] = (segs[-1][0], max(segs[-1][1], f1 - segs[-1][0]), tag)
         elif f1 > f0:
             segs.append((f0, f1 - f0, tag))
 
+# never play the same sound twice: a piece may not start before the previous one ends
+fixed = []
+for f0, n, tag in segs:
+    if fixed and f0 < fixed[-1][0] + fixed[-1][1]:
+        end = f0 + n; f0 = fixed[-1][0] + fixed[-1][1]; n = end - f0
+    if n > 2:
+        fixed.append((f0, n, tag))
+segs = fixed
+
 if os.environ.get("CUT_DRY"):
     tot = 0
     for s0, e0, tag, *_ in keep:
-        k = sum(n * FD for f0, n, _ in segs if s0 - FD <= f0 * FD <= e0 + FD); tot += k
+        k = sum(n * FD for f0, n, _ in segs if s0 - 0.2 <= f0 * FD <= e0 + 0.05); tot += k
         print(f"{s0:7.2f}-{e0:7.2f} {tag} raw={e0 - s0:5.1f} kept={k:5.1f}")
-    print(f"total kept {tot:.1f}s -> {tot / speed:.1f}s at {speed}x"); sys.exit()
+    real = sum(n for _, n, _ in segs) * FD
+    print(f"total kept {real:.1f}s -> {real / speed:.1f}s at {speed}x ({len(segs)} pieces)"); sys.exit()
 
 # --- level matching: bring each piece's speech (90th percentile of 10 ms RMS) to the common level, so a
 #     speaker far from the mic is not quieter than the one wearing it (CUT_LEVEL=0 disables)
